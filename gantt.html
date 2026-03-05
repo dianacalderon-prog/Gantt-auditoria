@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gantt Editable · Yuno Audit 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d0f14;
+  --surface:#13161d;
+  --surface2:#1a1e28;
+  --surface3:#222738;
+  --border:#2a2f3e;
+  --border2:#343a4f;
+  --text:#e8eaf0;
+  --text2:#8b91a8;
+  --text3:#555d78;
+  --accent:#5b8af0;
+  --accent2:#3d6ae0;
+  --green:#34d399;
+  --green-bg:rgba(52,211,153,.12);
+  --orange:#fb923c;
+  --orange-bg:rgba(251,146,60,.12);
+  --red:#f87171;
+  --red-bg:rgba(248,113,113,.12);
+  --blue:#60a5fa;
+  --blue-bg:rgba(96,165,250,.12);
+  --deadline-col:rgba(244,63,94,.07);
+  --deadline-col2:rgba(251,191,36,.07);
+  --radius:10px;
+  --radius-sm:6px;
+  --shadow:0 4px 24px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;min-height:100vh;padding:24px}
+
+/* ────── LAYOUT ────── */
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;flex-wrap:wrap;gap:16px}
+.brand{display:flex;align-items:center;gap:14px}
+.brand-icon{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 4px 20px rgba(91,138,240,.35)}
+.brand-title{font-size:1.35rem;font-weight:700;letter-spacing:-.3px}
+.brand-sub{font-size:.75rem;color:var(--text3);margin-top:2px;font-family:'DM Mono',monospace}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.save-badge{font-size:.72rem;font-family:'DM Mono',monospace;padding:5px 12px;border-radius:20px;background:var(--surface2);color:var(--text3);border:1px solid var(--border);display:flex;align-items:center;gap:6px;transition:all .3s}
+.save-badge.saved{color:var(--green);border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.06)}
+.save-badge.saving{color:var(--orange);border-color:rgba(251,146,60,.3)}
+.save-dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius-sm);font-size:.78rem;font-weight:600;cursor:pointer;border:none;transition:all .15s;font-family:'DM Sans',sans-serif}
+.btn-ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--surface3);color:var(--text);border-color:var(--border2)}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 2px 12px rgba(91,138,240,.3)}
+.btn-primary:hover{background:var(--accent2);transform:translateY(-1px);box-shadow:0 4px 18px rgba(91,138,240,.4)}
+.btn-danger{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.2)}
+.btn-danger:hover{background:rgba(248,113,113,.2)}
+.btn-sm{padding:4px 9px;font-size:.7rem}
+
+/* ────── KPI STRIP ────── */
+.kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px}
+.kpi-val{font-size:1.7rem;font-weight:700;font-family:'DM Mono',monospace;line-height:1}
+.kpi-lbl{font-size:.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-top:6px}
+.kpi-card.k-concluded .kpi-val{color:var(--green)}
+.kpi-card.k-pending .kpi-val{color:var(--orange)}
+.kpi-card.k-inprogress .kpi-val{color:var(--blue)}
+.kpi-card.k-pastdue .kpi-val{color:var(--red)}
+.kpi-card.k-total .kpi-val{color:var(--accent)}
+.kpi-card.k-pct .kpi-val{color:#c084fc}
+.progress-strip{height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;margin-top:10px}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--green),#059669);border-radius:3px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+
+/* ────── LEGEND ────── */
+.legend-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 16px;margin-bottom:14px;display:flex;gap:20px;flex-wrap:wrap;align-items:center;font-size:.72rem;color:var(--text3)}
+.legend-item{display:flex;align-items:center;gap:6px}
+.legend-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0}
+.ld-deadline1{background:rgba(244,63,94,.4);border:1px solid #f43f5e}
+.ld-deadline2{background:rgba(251,191,36,.4);border:1px solid #fbbf24}
+.ld-deadline3{background:rgba(168,85,247,.4);border:1px solid #a855f7}
+.ld-today{background:rgba(251,146,60,.4);border:1px solid var(--orange)}
+.ld-weekend{background:rgba(0,0,0,.3);border:1px solid var(--border2)}
+
+/* ────── FILTERS ────── */
+.filter-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.filter-bar select,.filter-bar input{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:6px 10px;font-size:.78rem;font-family:'DM Sans',sans-serif;outline:none;cursor:pointer}
+.filter-bar select:focus,.filter-bar input:focus{border-color:var(--accent)}
+.filter-bar label{font-size:.72rem;font-weight:600;color:var(--text3);display:flex;flex-direction:column;gap:4px}
+.filter-count{margin-left:auto;font-size:.72rem;color:var(--text3);font-family:'DM Mono',monospace;white-space:nowrap}
+
+/* ────── TABLE ────── */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.table-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+
+/* Week group row (row 1 of thead) */
+thead tr.week-row th{padding:5px 4px;font-size:.62rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);white-space:nowrap;border-right:1px solid var(--border);text-align:center;background:var(--surface3)}
+thead tr.week-row th.info-th{text-align:left;background:var(--surface2);padding:8px 10px;font-size:.66rem}
+thead tr.week-row th.wg-today{color:var(--orange);background:rgba(251,146,60,.06)}
+thead tr.week-row th.wg-deadline1{color:#f43f5e;background:rgba(244,63,94,.06)}
+thead tr.week-row th.wg-deadline2{color:#fbbf24;background:rgba(251,191,36,.06)}
+thead tr.week-row th.wg-deadline3{color:#a855f7;background:rgba(168,85,247,.06)}
+.week-sub{display:block;font-size:.55rem;font-weight:400;opacity:.6;margin-top:1px;letter-spacing:0;text-transform:none}
+
+/* Day header row (row 2 of thead) */
+thead tr.day-row th{padding:4px 1px;font-size:.58rem;font-weight:600;color:var(--text3);white-space:nowrap;border-right:1px solid var(--border);text-align:center;background:var(--surface2);cursor:default;width:22px;min-width:22px;max-width:22px}
+thead tr.day-row th.th-today{color:var(--orange)!important;background:rgba(251,146,60,.1)!important}
+thead tr.day-row th.th-dl1{color:#f43f5e!important;background:rgba(244,63,94,.12)!important;font-weight:800}
+thead tr.day-row th.th-dl2{color:#fbbf24!important;background:rgba(251,191,36,.12)!important;font-weight:800}
+thead tr.day-row th.th-dl3{color:#a855f7!important;background:rgba(168,85,247,.12)!important;font-weight:800}
+thead tr.day-row th.th-weekend{color:var(--text3);background:rgba(0,0,0,.15)!important;opacity:.7}
+.day-num{display:block;line-height:1.3}
+.day-dow{display:block;font-size:.5rem;opacity:.55;line-height:1}
+.dl-badge{display:block;font-size:.42rem;font-weight:800;letter-spacing:.2px;margin-top:1px;text-transform:uppercase}
+
+/* group rows */
+tr.group-row td{background:var(--surface2);padding:8px 14px;font-size:.68rem;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);border-top:2px solid var(--border);cursor:pointer;user-select:none}
+tr.group-row:hover td{color:var(--text2)}
+tr.group-row td .gprog{display:inline-flex;align-items:center;gap:8px;margin-left:10px}
+tr.group-row td .gprog-bar{width:60px;height:5px;background:var(--border);border-radius:3px;overflow:hidden;display:inline-block}
+tr.group-row td .gprog-fill{height:100%;background:var(--green);border-radius:3px;transition:width .4s}
+tr.group-row.collapsed+tr.task-row,tr.group-row.collapsed~tr.task-row{display:none}
+
+/* task rows */
+tr.task-row td{border-bottom:1px solid var(--border);vertical-align:middle;padding:0}
+tr.task-row:hover td{background:rgba(255,255,255,.014)}
+tr.task-row.filtered-out{display:none}
+
+/* cell types */
+.cell{padding:8px 10px;position:relative}
+.cell-num{width:44px;text-align:center;font-size:.7rem;font-weight:600;color:var(--text3);font-family:'DM Mono',monospace}
+.cell-info{max-width:270px;min-width:170px}
+.cell-proceso{width:120px}
+.cell-team{width:115px}
+.cell-resp{width:125px}
+.cell-status{width:112px;text-align:center}
+.cell-day{width:22px;min-width:22px;max-width:22px;text-align:center;padding:3px 1px}
+.cell-actions{width:40px;text-align:center;padding:6px 4px}
+
+/* day column backgrounds */
+.cell-day.col-today{background:rgba(251,146,60,.05)}
+.cell-day.col-dl1{background:rgba(244,63,94,.05)}
+.cell-day.col-dl2{background:rgba(251,191,36,.05)}
+.cell-day.col-dl3{background:rgba(168,85,247,.05)}
+.cell-day.col-weekend{background:rgba(0,0,0,.1)}
+
+/* editable cells */
+.editable{cursor:pointer;border-radius:var(--radius-sm);transition:background .15s}
+.editable:hover{background:var(--surface3)}
+.editable.editing{background:var(--surface3);outline:2px solid var(--accent);outline-offset:-1px}
+
+/* inline input */
+.inline-input{background:transparent;border:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.78rem;width:100%;outline:none;padding:0}
+
+/* status pills */
+.pill{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:20px;font-size:.67rem;font-weight:700;cursor:pointer;transition:all .15s;user-select:none;white-space:nowrap}
+.pill-c{background:var(--green-bg);color:var(--green);border:1px solid rgba(52,211,153,.25)}
+.pill-c:hover{background:rgba(52,211,153,.2)}
+.pill-p{background:var(--orange-bg);color:var(--orange);border:1px solid rgba(251,146,60,.25)}
+.pill-p:hover{background:rgba(251,146,60,.2)}
+.pill-i{background:var(--blue-bg);color:var(--blue);border:1px solid rgba(96,165,250,.25)}
+.pill-i:hover{background:rgba(96,165,250,.2)}
+.pill-d{background:var(--red-bg);color:var(--red);border:1px solid rgba(248,113,113,.25)}
+.pill-d:hover{background:rgba(248,113,113,.2)}
+
+/* team badges */
+.team-badge{display:inline-block;padding:3px 8px;border-radius:5px;font-size:.67rem;font-weight:700;white-space:nowrap}
+.t-acc{background:rgba(96,165,250,.12);color:#93c5fd}
+.t-leg{background:rgba(167,139,250,.12);color:#c4b5fd}
+.t-fpa{background:rgba(52,211,153,.12);color:#6ee7b7}
+.t-ppl{background:rgba(251,191,36,.12);color:#fcd34d}
+.t-tre{background:rgba(56,189,248,.12);color:#7dd3fc}
+.t-prd{background:rgba(249,168,212,.12);color:#f9a8d4}
+.t-sec{background:rgba(110,231,183,.12);color:#a7f3d0}
+.t-trc{background:rgba(252,165,165,.12);color:#fca5a5}
+
+/* day dots */
+.wdot{width:18px;height:18px;border-radius:5px;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:.52rem;font-weight:800;cursor:pointer;transition:all .15s;border:1.5px dashed var(--border2)}
+.wdot:hover{border-color:var(--accent);background:rgba(91,138,240,.1)}
+.wdot.active-c{background:var(--green-bg);border:1.5px solid rgba(52,211,153,.55);color:var(--green)}
+.wdot.active-p{background:var(--orange-bg);border:1.5px solid rgba(251,146,60,.55);color:var(--orange)}
+.wdot.active-i{background:var(--blue-bg);border:1.5px solid rgba(96,165,250,.55);color:var(--blue)}
+.wdot.active-d{background:var(--red-bg);border:1.5px solid rgba(248,113,113,.55);color:var(--red)}
+.wdot.today-ring{border-color:rgba(251,146,60,.4)!important}
+.wdot.dl1-ring{border-color:rgba(244,63,94,.4)!important}
+.wdot.dl2-ring{border-color:rgba(251,191,36,.4)!important}
+.wdot.dl3-ring{border-color:rgba(168,85,247,.4)!important}
+.wdot.weekend-dot{opacity:.65}
+
+/* delete btn */
+.del-btn{width:24px;height:24px;border-radius:5px;background:transparent;border:none;color:var(--text3);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;opacity:0}
+tr.task-row:hover .del-btn{opacity:1}
+.del-btn:hover{background:rgba(248,113,113,.15);color:var(--red)}
+
+/* add row */
+.add-row td{padding:8px 12px;border-top:1px dashed var(--border)}
+.add-row .add-btn-inner{display:flex;align-items:center;gap:8px;color:var(--text3);font-size:.75rem;cursor:pointer;transition:color .15s}
+.add-row .add-btn-inner:hover{color:var(--accent)}
+
+/* ────── MODAL ────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:100}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:28px;width:480px;max-width:90vw;box-shadow:var(--shadow)}
+.modal h2{font-size:1.1rem;margin-bottom:6px}
+.modal p{font-size:.8rem;color:var(--text3);margin-bottom:20px;line-height:1.5}
+.modal-btns{display:flex;gap:10px;flex-wrap:wrap}
+textarea.export-area{width:100%;height:180px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Mono',monospace;font-size:.72rem;padding:12px;outline:none;resize:vertical;margin-top:12px}
+
+/* ────── TOAST ────── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 18px;font-size:.78rem;color:var(--text2);box-shadow:var(--shadow);transform:translateY(80px);opacity:0;transition:all .3s;z-index:50;display:flex;align-items:center;gap:10px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast-undo{color:var(--accent);font-weight:700;cursor:pointer;margin-left:8px}
+
+/* ────── SCROLLBAR ────── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--surface)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#444d65}
+
+/* ────── EDIT HINT ────── */
+.edit-hint{background:rgba(91,138,240,.08);border:1px solid rgba(91,138,240,.2);border-radius:var(--radius);padding:10px 16px;margin-bottom:16px;font-size:.76rem;color:var(--accent);display:flex;align-items:center;gap:8px}
+.edit-hint kbd{background:var(--surface3);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;font-family:'DM Mono',monospace;font-size:.7rem}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-icon">📋</div>
+    <div>
+      <div class="brand-title">Audit Tracker · Gantt</div>
+      <div class="brand-sub">REQUEST FOLLOW-UP · YUNO 2026</div>
+    </div>
+  </div>
+  <div class="toolbar">
+    <div class="save-badge" id="save-badge">
+      <span class="save-dot"></span>
+      <span id="save-text">Guardado automático</span>
+    </div>
+    <button class="btn btn-ghost" onclick="undoLast()" title="Ctrl+Z">↩ Deshacer</button>
+    <button class="btn btn-ghost" onclick="openExport()">⬇ Exportar</button>
+    <button class="btn btn-ghost" onclick="openImport()">⬆ Importar JSON</button>
+    <button class="btn btn-danger btn-sm" onclick="confirmReset()">🗑 Reiniciar</button>
+  </div>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-strip" id="kpi-strip"></div>
+
+<!-- EDIT HINT -->
+<div class="edit-hint">
+  💡 <span><strong>Doble clic</strong> en cualquier texto para editarlo · Clic en el <strong>estado</strong> para cambiar (Pending → In Progress → Concluded → Past Due) · Clic en un <strong>día</strong> para asignar deadline · <kbd>Enter</kbd> confirma · <kbd>Esc</kbd> cancela</span>
+</div>
+
+<!-- DEADLINE LEGEND -->
+<div class="legend-bar">
+  <strong style="color:var(--text2);font-size:.72rem">Leyenda:</strong>
+  <div class="legend-item"><div class="legend-dot ld-deadline1"></div><span>Deadline 16/02 (principal)</span></div>
+  <div class="legend-item"><div class="legend-dot ld-deadline2"></div><span>Deadline 27/02 (DEEL / NetSuite)</span></div>
+  <div class="legend-item"><div class="legend-dot ld-deadline3"></div><span>Deadline 02/03 (Comisiones)</span></div>
+  <div class="legend-item"><div class="legend-dot ld-today"></div><span>Hoy</span></div>
+  <div class="legend-item"><div class="legend-dot ld-weekend"></div><span>Fin de semana</span></div>
+</div>
+
+<!-- FILTERS -->
+<div class="filter-bar">
+  <label>Proceso <select id="f-proceso"><option value="">Todos</option></select></label>
+  <label>Team <select id="f-team"><option value="">Todos</option></select></label>
+  <label>Estado
+    <select id="f-status">
+      <option value="">Todos</option>
+      <option>Concluded</option>
+      <option>In Progress</option>
+      <option>Pending</option>
+      <option>Past Due</option>
+    </select>
+  </label>
+  <label>Buscar <input type="text" id="f-search" placeholder="Texto libre…" style="width:180px"></label>
+  <button class="btn btn-ghost btn-sm" onclick="resetFilters()">✕</button>
+  <span class="filter-count" id="filter-count"></span>
+</div>
+
+<!-- TABLE -->
+<div class="table-wrap">
+  <div class="table-scroll">
+    <table>
+      <thead id="gantt-head"></thead>
+      <tbody id="gantt-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- EXPORT MODAL -->
+<div class="modal-overlay" id="export-modal">
+  <div class="modal">
+    <h2>⬇ Exportar datos</h2>
+    <p>Copia el JSON o descarga el CSV. Guardá el JSON para importarlo luego y restaurar todos tus cambios.</p>
+    <div class="modal-btns">
+      <button class="btn btn-primary" onclick="downloadJSON()">⬇ Descargar JSON</button>
+      <button class="btn btn-ghost" onclick="downloadCSV()">⬇ Descargar CSV</button>
+      <button class="btn btn-ghost" onclick="copyJSON()">📋 Copiar JSON</button>
+      <button class="btn btn-ghost" onclick="closeModal('export-modal')">✕ Cerrar</button>
+    </div>
+    <textarea class="export-area" id="export-area" readonly></textarea>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="modal-overlay" id="import-modal">
+  <div class="modal">
+    <h2>⬆ Importar JSON</h2>
+    <p>Pegá el JSON exportado previamente para restaurar tus datos. <strong>Esto reemplazará todos los datos actuales.</strong></p>
+    <textarea class="export-area" id="import-area" placeholder='[{"num":1,"proceso":"...","info":"..."}]'></textarea>
+    <div class="modal-btns" style="margin-top:12px">
+      <button class="btn btn-primary" onclick="importJSON()">✔ Importar</button>
+      <button class="btn btn-ghost" onclick="closeModal('import-modal')">✕ Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <span id="toast-msg">Cambio aplicado</span>
+  <span class="toast-undo" onclick="undoLast()">Deshacer</span>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+//  DATE & TIMELINE CONFIG
+//  Range: Feb 1, 2026 → Mar 31, 2026 (59 days)
+// ─────────────────────────────────────────────
+const DAY_START   = new Date(2026, 1, 1);  // Feb 1, 2026
+const TOTAL_DAYS  = 59;                    // Feb(28) + Mar(31)
+const INFO_COLS   = 6;                     // #, Req, Proceso, Team, Resp, Estado
+const TOTAL_COLS  = INFO_COLS + TOTAL_DAYS + 1; // +1 actions
+
+// Deadline day indices (Feb 1 = day 1)
+// Day 16 = Feb 16 · Day 27 = Feb 27 · Day 30 = Mar 2
+const DEADLINES = [
+  { day: 16, label: 'DL1', cls: 'dl1', color: '#f43f5e', title: '⚠ Deadline 16/02 (Principal)' },
+  { day: 27, label: 'DL2', cls: 'dl2', color: '#fbbf24', title: '⚠ Deadline 27/02 (DEEL/NetSuite)' },
+  { day: 30, label: 'DL3', cls: 'dl3', color: '#a855f7', title: '⚠ Deadline 02/03 (Comisiones)' },
+];
+const DEADLINE_MAP = {};
+DEADLINES.forEach(d => { DEADLINE_MAP[d.day] = d; });
+
+// Today's day index (dynamic based on real date)
+function calcTodayDay() {
+  const now  = new Date();
+  const diff = Math.floor((now - DAY_START) / 86400000);
+  const d    = diff + 1;
+  return (d >= 1 && d <= TOTAL_DAYS) ? d : 0;
+}
+const TODAY_DAY = calcTodayDay(); // e.g. 26 for Feb 26
+
+// Week group definitions (9 weeks)
+const WEEK_GROUPS = [
+  { label:'S1', start:1,  end:7,  sub:'01–07 Feb' },
+  { label:'S2', start:8,  end:14, sub:'08–14 Feb' },
+  { label:'S3', start:15, end:21, sub:'15–21 Feb' },
+  { label:'S4', start:22, end:28, sub:'22–28 Feb' },
+  { label:'S5', start:29, end:35, sub:'01–07 Mar' },
+  { label:'S6', start:36, end:42, sub:'08–14 Mar' },
+  { label:'S7', start:43, end:49, sub:'15–21 Mar' },
+  { label:'S8', start:50, end:56, sub:'22–28 Mar' },
+  { label:'S9', start:57, end:59, sub:'29–31 Mar' },
+];
+
+// Pre-compute info for all 59 days
+const DAY_METAS = [null]; // index 0 unused; 1-based
+const DOW_LABELS = ['D','L','M','X','J','V','S']; // Sun=D
+const MONTH_NAMES = ['','','Feb','Mar']; // month 2=Feb, 3=Mar
+for (let i = 1; i <= TOTAL_DAYS; i++) {
+  const date  = new Date(DAY_START.getTime() + (i - 1) * 86400000);
+  const dow   = date.getDay();
+  const dl    = DEADLINE_MAP[i] || null;
+  const isToday   = (i === TODAY_DAY);
+  const isWeekend = (dow === 0 || dow === 6);
+  // Week group
+  const wg = WEEK_GROUPS.find(w => i >= w.start && i <= w.end);
+  DAY_METAS.push({ date, dayNum: date.getDate(), dow, dowLabel: DOW_LABELS[dow],
+    monthNum: date.getMonth(), isToday, isWeekend, deadline: dl, weekGroup: wg });
+}
+
+// ─────────────────────────────────────────────
+//  STATUS CONFIG
+// ─────────────────────────────────────────────
+const STATUS_CONFIG = {
+  'Pending':     { cls:'pill-p', icon:'⋯', label:'Pending',     dot:'active-p' },
+  'In Progress': { cls:'pill-i', icon:'▶', label:'In Progress', dot:'active-i' },
+  'Concluded':   { cls:'pill-c', icon:'✓', label:'Concluded',   dot:'active-c' },
+  'Past Due':    { cls:'pill-d', icon:'⚠', label:'Past Due',    dot:'active-d' },
+};
+const STATUS_CYCLE = ['Pending','In Progress','Concluded','Past Due'];
+
+// ─────────────────────────────────────────────
+//  DATA BUILD  (updated automatically by sync_gantt.py)
+//  Changing this value forces the browser to ignore stale localStorage
+//  and reload fresh data from DEFAULT_TASKS on next open.
+// ─────────────────────────────────────────────
+const DATA_BUILD = '20260304-1857';
+
+// ─────────────────────────────────────────────
+//  DEFAULT DATA
+// ─────────────────────────────────────────────
+const DEFAULT_TASKS = [
+  {id:1,num:1,proceso:"Cifras",info:"Compartir consolidados a septiembre",team:"Accounting",resp:"Lusdey Hernandez Bolaños",status:"Concluded",semana:16},
+  {id:2,num:2,proceso:"Generales",info:"Actas de Junta directivas realizadas entre el 1 de enero al 31 de diciembre del 2025 de las compañias del grupo que aplique",team:"Legal & Compliance",resp:"Lusdey Hernandez Bolaños",status:"Concluded",semana:16},
+  {id:3,num:2,proceso:"Generales",info:"Actas de asamblea de accionistras y/o equivalente realizadas entre el 1 de enero al 31 de diciembre del 2025 de las compañias del grupo que aplique",team:"Legal & Compliance",resp:"Lusdey Hernandez Bolaños",status:"Concluded",semana:16},
+  {id:4,num:3,proceso:"Generales",info:"Estatutos sociales de la Compañía (en caso de existir). Actualizados 31 de diciembre del 2025 de las compañias del grupo que aplique",team:"Legal & Compliance",resp:"Juan Pablo Pantoja Ruiz",status:"Concluded",semana:16},
+  {id:5,num:4,proceso:"Generales",info:"Plan estratégico del negocio para 2025 Actualizado al 31 de diciembre del 2025 de las compañias del grupo.",team:"FP&A",resp:"Camilo Muñoz Vega",status:"Concluded",semana:16},
+  {id:6,num:5,proceso:"Generales",info:"Copia electronica Manual de políticas contables vigentes de las compañias del grupo",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:7,num:6,proceso:"Generales",info:"Flugramas de proceso para cada una de las areas claves de la compañía (Ingreso, cartera, tesoreria, cuentas por pagar, propiedad, planta y equipo, intangibles, impuestos, obligaciones financieras, entre otros.)",team:"Product",resp:"Andres Stiven Molina Bohorquez",status:"Concluded",semana:16},
+  {id:8,num:7,proceso:"Generales",info:"Copia electronica del Manual del trabajador de las compañias del grupo.",team:"People",resp:"Jimena Solorzano",status:"Concluded",semana:16},
+  {id:9,num:8,proceso:"Generales",info:"Copia electronica del Matriz de riesgos de las compañias del grupo.",team:"Legal & Compliance",resp:"Juan Pablo Pantoja Ruiz",status:"Concluded",semana:16},
+  {id:10,num:9,proceso:"Generales",info:"Copia electronica del Matriz de aprobaciones de las compañias del grupo.",team:"Treasury",resp:"Leticia Chaparro Corona",status:"Concluded",semana:16},
+  {id:11,num:10,proceso:"Generales",info:"Copia electronica del Código de ética de las compañias del grupo. idem al punto 13",team:"Legal & Compliance",resp:"Karina Seixas",status:"Concluded",semana:16},
+  {id:12,num:11,proceso:"Generales",info:"Procedimiento y mecanismo de denuncias de irregularidades por parte personal que realice operaciones de las compañias del grupo.",team:"Legal & Compliance",resp:"-",status:"Concluded",semana:16},
+  {id:13,num:12,proceso:"Generales",info:"Reporte De Denuncias E Irregularidades Reportadas A La Linea De Fraude / Asuntos De Auditoria del 1 enero al 31 de diciembre del 2025 de las compañias del grupo.",team:"Legal & Compliance",resp:"Juan Pablo Pantoja Ruiz",status:"Concluded",semana:16},
+  {id:14,num:13,proceso:"Generales",info:"Codigo De Etica, Manual de LA/FT, politica de conflicto intereses, codigo de conducta, y de mas manuales de las compañias del grupo.",team:"People",resp:"Karina Seixas",status:"Concluded",semana:16},
+  {id:15,num:14,proceso:"Generales",info:"listado de normas y regulaciones de las entidades y entes que vigilan Grupo",team:"Legal & Compliance",resp:"-",status:"Concluded",semana:16},
+  {id:16,num:15,proceso:"Generales",info:"Libros oficiales al corte del 31 de diciembre del 2025 de las compañias del grupo.",team:"Accounting",resp:"Lusdey Hernandez Bolaños",status:"Concluded",semana:16},
+  {id:17,num:16,proceso:"Generales",info:"Soporte del estudio y resultado de precios de transferencia de 2024 presentados en 2025",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:18,num:17,proceso:"Generales",info:"Relación en Excel de las posibles contingencias en materia fiscal, laboral, civil, comercial, penal y administrativa al 31 de diciembre del 2025",team:"Legal & Compliance",resp:"Juan Pablo Pantoja Ruiz",status:"Concluded",semana:16},
+  {id:19,num:18,proceso:"Generales",info:"Relación de los contratos suscritos con vinculados vigentes a 31 de diciembre del 2025",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:20,num:19,proceso:"Generales",info:"Relación de los contratos suscritos durante 2025 con proveedores u otros, vigentes a 31 de diciembre del 2025",team:"Treasury",resp:"Leticia Chaparro Corona",status:"Concluded",semana:16},
+  {id:21,num:20,proceso:"Generales",info:"Relación de los contratos suscritos durante 2025 con Clientes vigentes a 31 de diciembre del 2025",team:"Treasury",resp:"Leticia Chaparro Corona",status:"Concluded",semana:16},
+  {id:22,num:21,proceso:"Generales",info:"Relación de los contratos suscritos con clientes (Historico)",team:"Treasury",resp:"Leticia Chaparro Corona",status:"Concluded",semana:16},
+  {id:23,num:22,proceso:"Generales",info:"Relación correspondencia de las entidades de control enviada y recibida (DIAN, Superintendencia de Sociedades, etc.) al 31 de diciembre del 2025",team:"Legal & Compliance",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:24,num:23,proceso:"Generales",info:"Detalle de transacciones inusuales identificadas y presentadas durante 2025",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:25,num:24,proceso:"Reuniones de entendimiento",info:"Reunión entendimiento del proceso de cierre contable",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:26,num:25,proceso:"Reuniones de entendimiento",info:"Reunión entendimiento del proceso de tesoreria",team:"Treasury",resp:"Leticia Chaparro Corona",status:"Concluded",semana:16},
+  {id:27,num:26,proceso:"Reuniones de entendimiento",info:"Reunión entendimiento del proceso de Compras, cxp",team:"Treasury",resp:"Leticia Chaparro Corona",status:"Concluded",semana:16},
+  {id:28,num:27,proceso:"Reuniones de entendimiento",info:"Reunión entendimiento del proceso de Ingresos, cxc, precios y comercial",team:"Treasury / Comercial / FP&A",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:29,num:28,proceso:"Reuniones de entendimiento",info:"Reunión entendimiento del proceso de Obligaciones Financieras",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:30,num:29,proceso:"Reuniones de entendimiento",info:"Reunión entendimiento del proceso de Impuestos",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Pending",semana:16},
+  {id:31,num:30,proceso:"Reuniones de entendimiento",info:"Reunión entendimiento del proceso de Nómina",team:"People",resp:"Angie Udry",status:"Concluded",semana:16},
+  {id:32,num:31,proceso:"Reuniones de entendimiento",info:"Reunión entendimiento del proceso de IT",team:"Security / Tech",resp:"Chiara La Valle",status:"Concluded",semana:16},
+  {id:33,num:32,proceso:"Cifras",info:"Presupuesto 2025 y ejecución del mismo a la fecha, con sus respectivas aprobaciones donde se evidencie quien elabora y quien aprueba",team:"FP&A",resp:"Camilo Muñoz Vega",status:"Concluded",semana:16},
+  {id:34,num:33,proceso:"Cifras",info:"Balance General y estados de resultados detallado mensualizado comparado al 31 de diciembre el 2025, 31 de diciembre del 2024",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:35,num:34,proceso:"Cifras",info:"Análisis de las variaciones presentadas tanto para las cuentas de balance como para las cuentas de resultado que superen el 10%",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Pending",semana:16},
+  {id:36,num:35,proceso:"Cifras",info:"Journal Entries – Período comprendido entre el 1 de enero al 31 de diciembre del 2025",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:37,num:36,proceso:"Cifras",info:"Journal Entries – Período comprendido entre el 1 de enero al 31 de diciembre del 2024",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:38,num:37,proceso:"Cifras",info:"Listado de tipos de documento y transacciones del sistema contable, area",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:39,num:38,proceso:"Cifras",info:"Listado de usuarios que contenga: Usuario, nombre cargo, area",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:40,num:39,proceso:"Generales",info:"Relacion de inventarios politicas POL.FIN que contenga Nombre, Politica, area proceso, fecha de ultima actualizacion",team:"People",resp:"Angie Udry",status:"Concluded",semana:16},
+  {id:41,num:40,proceso:"Generales",info:"Analisis de negocio en marcha para cada uno de las compañias al 31 de diciembre de 2025",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Pending",semana:16},
+  {id:42,num:41,proceso:"Generales",info:"Listado de Comités que se celebren en la entidad donde indique la periodicidad, áreas participantes y responsable del comité, junto con las actas de las sesiones celebradas durante 2025",team:"Legal & Compliance",resp:"Jimena Solorzano",status:"Concluded",semana:16},
+  {id:43,num:42,proceso:"Generales",info:"Relación de los requerimientos tributarios con terceros de la entidad entre el 1 de enero de 2025 y la fecha de envío de la información",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:44,num:43,proceso:"Generales",info:"Certificado de existencia y representación legal vigente (máximo 30 días de antigüedad a la fecha de entrega)",team:"Legal & Compliance",resp:"Karina Seixas",status:"Concluded",semana:16},
+  {id:45,num:44,proceso:"Cifras",info:"Sabana de consolidación al 31 de diciembre de 2025 incluyendo el mapeo y detalle de las eliminaciones y ajustes de consolidación",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Pending",semana:16},
+  {id:46,num:45,proceso:"Cifras",info:"Papel de trabajo y/o mapeo de cuentas para la elaboración de los estados financieros al 31 de diciembre 2025",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:47,num:46,proceso:"Cifras",info:"Mapeo de las cuentas contables con las que se construye el estado de cambios en el patrimonio y soportes de los movimientos que afectaron el Estado de Cambios en el Patrimonio durante el año 2025",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Pending",semana:16},
+  {id:48,num:47,proceso:"Cifras",info:"Conciliación del concepto de Ajustes en la Adopción por Primera Vez NCIF al 31 de diciembre de 2025",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:49,num:48,proceso:"Cifras",info:"Mapeo de las cuentas contables con las que se construye el estado de flujos de efectivo y soportes de los movimientos que lo afectaron",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:50,num:49,proceso:"Efectivo y Equivalentes de Efectivo",info:"Conciliaciones de las cuentas de bancos nacionales y extranjeros al 31 de diciembre de 2025",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:51,num:50,proceso:"Efectivo y Equivalentes de Efectivo",info:"Datos de contacto de cada uno de los bancos (responsable Yuno + responsable Banco)",team:"Treasury",resp:"Leticia Chaparro Corona",status:"Concluded",semana:16},
+  {id:52,num:51,proceso:"Efectivo y Equivalentes de Efectivo",info:"Detalle de los títulos que componen el rubro de Money Market a 31 de diciembre de 2025",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:53,num:52,proceso:"Cuentas por cobrar",info:"Detalle de las cuentas por cobrar vigentes al 31 de diciembre de 2025",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Pending",semana:16},
+  {id:54,num:53,proceso:"Otros activos corrientes",info:"Detalle de la cuenta de otros activos corrientes al 31 de diciembre de 2025",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Pending",semana:16},
+  {id:55,num:54,proceso:"Activos fijos",info:"Base de propiedad, planta y equipo al 31 de diciembre de 2025",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:56,num:55,proceso:"Activos fijos",info:"Indicar si existen restricciones de algún tipo sobre los activos fijos de la entidad al 31 de diciembre de 2025",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:57,num:56,proceso:"Activos fijos",info:"Base de adiciones y retiros propiedad, planta y equipo entre el 1 de enero al 31 de diciembre de 2025",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:58,num:57,proceso:"Activos Intangibles",info:"Base de intangibles al 31 de diciembre de 2025 (proveedor, descripción, valor, amortización)",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:59,num:58,proceso:"Activos Intangibles",info:"Detalle del cálculo de deterioro al 31 de diciembre de 2025 de intangibles clasificados de vida indefinida",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:60,num:59,proceso:"Activos Intangibles",info:"Base de altas y bajas de activos intangibles del 1 de enero al 31 de diciembre de 2025",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:61,num:60,proceso:"Cuentas por pagar",info:"Detalle de las cuentas por pagar vigentes al 31 de diciembre de 2025",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Pending",semana:16},
+  {id:62,num:61,proceso:"Crédito revolvente",info:"Datos de contacto de cada uno de los bancos (revolvente)",team:"Treasury",resp:"Leticia Chaparro Corona",status:"Concluded",semana:16},
+  {id:63,num:62,proceso:"Crédito revolvente",info:"Estado de cuenta del crédito al 31 de diciembre de 2025. Soporte de pago de crédito realizado durante el año 2026.",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:64,num:63,proceso:"Otros Pasivos corrientes",info:"Detalle de la cuenta de otros pasivos corrientes al 31 de diciembre de 2025",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Pending",semana:16},
+  {id:65,num:64,proceso:"SAFEs",info:"Soporte del Acuerdo Simple para Capital Futuro debidamente aprobado por el órgano de control interno que aplique",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:66,num:65,proceso:"Ingresos devengados",info:"Detalle de la cuenta de ingresos devengados al 31 de diciembre de 2025",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:67,num:66,proceso:"Costo de los Ingresos devengados",info:"Detalle de la cuenta de Costo de los Ingresos devengados al 31 de diciembre de 2025",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:68,num:67,proceso:"Gastos operativos",info:"Detalle de la cuenta de gastos operativos al 31 de diciembre de 2025",team:"Accounting",resp:"Diana Calderon Montes De Oca",status:"Concluded",semana:16},
+  {id:69,num:68,proceso:"Generales",info:"Informacion DEEL: Contrato vigente",team:"People",resp:"Jimena Solorzano",status:"Pending",semana:27},
+  {id:70,num:68,proceso:"Generales",info:"Informacion DEEL: Procedimiento para la vinculacion y retiro de empleados",team:"People",resp:"Jimena Solorzano",status:"Concluded",semana:27},
+  {id:71,num:68,proceso:"Generales",info:"Informacion DEEL: Organigrama actualizado (incluyendo personal propio y tercerizado)",team:"People",resp:"Jimena Solorzano",status:"Concluded",semana:27},
+  {id:72,num:68,proceso:"Generales",info:"Informacion DEEL: Reporte de nómina descargado de Deel con corte al 31 de diciembre de 2025",team:"People",resp:"Jimena Solorzano",status:"Concluded",semana:27},
+  {id:73,num:68,proceso:"Generales",info:"Informacion DEEL: Soportes de la última contratación realizada al 31 de diciembre de 2025",team:"People",resp:"Jimena Solorzano",status:"Concluded",semana:27},
+  {id:74,num:68,proceso:"Generales",info:"Informacion DEEL: Informe SOC 1 (en caso de que el proveedor disponga de este)",team:"People",resp:"Karina Seixas",status:"Concluded",semana:27},
+  {id:75,num:69,proceso:"Generales",info:"Informacion Netsuite: Correo electrónico de recepción de la nómina correspondiente al mes de diciembre por parte de NetSuite (Oracle)",team:"People",resp:"Jimena Solorzano",status:"Concluded",semana:27},
+  {id:76,num:69,proceso:"Generales",info:"Informacion Netsuite: Contrato vigente con el proveedor de procesamiento de nómina",team:"People",resp:"Jimena Solorzano",status:"Pending",semana:27},
+  {id:77,num:69,proceso:"Generales",info:"Informacion Netsuite: Informe SOC 1 (en caso de que el proveedor disponga de este)",team:"People",resp:"Karina Seixas",status:"Concluded",semana:27},
+  {id:78,num:70,proceso:"Generales",info:"Informacion Yuno: Manuales y políticas internas vigentes (salarial, contratacion, bonificaciones por comisiones, vacaciones, incapacidades y licencia y stock options)",team:"People",resp:"Jimena Solorzano",status:"Concluded",semana:27},
+  {id:79,num:70,proceso:"Generales",info:"Informacion Yuno: Modelo de contrato donde se relacione la cláusula de pago (Stock Options)",team:"People",resp:"Jimena Solorzano",status:"Concluded",semana:27},
+  {id:80,num:70,proceso:"Generales",info:"Informacion Yuno: Soporte de la revisión de la nómina del mes de diciembre por parte de Yuno",team:"People",resp:"Jimena Solorzano",status:"Concluded",semana:27},
+  {id:81,num:70,proceso:"Generales",info:"Informacion Yuno: Mapa del proceso de nómina (flujo desde la contratación hasta el pago)",team:"People",resp:"Jimena Solorzano",status:"Concluded",semana:27},
+  {id:82,num:71,proceso:"Cifras",info:"Detalle de las liquidaciones de los cuatro tipos de comisiones correspondientes lo corrido del 2025",team:"FP&A",resp:"Camilo Muñoz Vega",status:"Concluded",semana:30},
+  {id:83,num:71,proceso:"Generales",info:"Politica de comisiones y procedimiento documentado, Compensation plan del 2025 y Plan de comisiones del 4Q",team:"FP&A",resp:"Camilo Muñoz Vega",status:"Concluded",semana:30},
+  {id:84,num:72,proceso:"Generales",info:"Contrato Marco (modelos de contrato)",team:"Legal & Compliance",resp:"Ivvy Larissa Bueno Soberay",status:"Concluded",semana:30},
+  {id:85,num:72,proceso:"Generales",info:"Calculadoras o modelos utilizados para evaluar y definir las tarifas negociadas con los clientes",team:"FP&A",resp:"Camilo Muñoz Vega / Juan Sebastian Bernate Melo",status:"Concluded",semana:30},
+  {id:86,num:72,proceso:"Generales",info:"Listado de servicios ofrecidos por Yuno, junto con sus respectivas definiciones y alcances",team:"FP&A",resp:"Andres Stiven Molina Bohorquez / juan.bernate@y.uno",status:"Concluded",semana:30},
+  {id:87,num:72,proceso:"Cifras",info:"Conciliación de la transaccionalidad del mes de noviembre vs. los comercios",team:"FP&A",resp:"Juan Sebastian Bernate Melo",status:"Pending",semana:30},
+  {id:88,num:73,proceso:"Generales",info:"Políticas de Cuentas por Pagar, Cuentas por Cobrar y Tesorería, en caso de contar con documentos formales vigentes",team:"Treasury / Comercial / FP&A",resp:"Leticia Chaparro Corona",status:"Pending",semana:30},
+  {id:89,num:73,proceso:"Generales",info:"Procedimientos documentados (si aplican) relacionados con los procesos mencionados",team:"Treasury / Comercial / FP&A",resp:"Leticia Chaparro Corona",status:"Pending",semana:30},
+  {id:90,num:74,proceso:"Reuniones de entendimiento",info:"Reunión entendimiento del proceso de deterioro IFRS 9",team:"Accounting",resp:"Karina Seixas",status:"Concluded",semana:16},
+  {id:91,num:75,proceso:"Reuniones de entendimiento",info:"Reunión entendimiento del proceso de costos de ventas",team:"FP&A",resp:"Camilo Muñoz Vega",status:"Concluded",semana:16},
+  {id:92,num:76,proceso:"Reuniones de entendimiento",info:"Reunión entendimiento del proceso intangibles",team:"Accounting",resp:"Karina Seixas",status:"Concluded",semana:16},
+  {id:93,num:77,proceso:"Reuniones de entendimiento",info:"Reunión entendimiento del proceso IT Netsuite",team:"Accounting",resp:"Lusdey Hernandez Bolaños",status:"Pending",semana:31}
+];
+
+const TEAM_CLASS = {
+  'Accounting':'t-acc','Legal & Compliance':'t-leg','FP&A':'t-fpa',
+  'People':'t-ppl','Treasury':'t-tre','Product':'t-prd',
+  'Security / Tech':'t-sec','Treasury / Comercial / FP&A':'t-trc'
+};
+const PROCESS_ORDER = [
+  'Generales','Cifras','Reuniones de entendimiento',
+  'Efectivo y Equivalentes de Efectivo','Cuentas por cobrar',
+  'Otros activos corrientes','Activos fijos','Activos Intangibles',
+  'Crédito revolvente','Otros Pasivos corrientes','SAFEs',
+  'Ingresos devengados','Costo de los Ingresos devengados','Gastos operativos'
+];
+
+let tasks = [];
+let undoStack = [];
+let nextId = 93;
+
+// ─────────────────────────────────────────────
+//  PERSISTENCE
+// ─────────────────────────────────────────────
+function migrateTask(t) {
+  // Migrate old semana (1-8 week numbers) to new day indices
+  const legacyMap = {1:16, 2:16, 3:23, 4:28, 5:35, 6:42, 7:49, 8:56};
+  if (t.semana >= 1 && t.semana <= 8 && legacyMap[t.semana]) {
+    // Only migrate if value looks like an old week number (not already a day)
+    // Old weeks were 1-8; new day values start from 1-59 but 1-8 overlap
+    // Safe to migrate 1-8 since no deadline falls on days 1-8
+    t.semana = legacyMap[t.semana];
+  }
+  // Ensure valid status
+  if (!STATUS_CYCLE.includes(t.status)) t.status = 'Pending';
+  return t;
+}
+
+const LSKEY = 'yuno_gantt_v3_' + DATA_BUILD;
+
+function loadData() {
+  try {
+    const saved = localStorage.getItem(LSKEY);
+    if (saved) {
+      tasks = JSON.parse(saved).map(migrateTask);
+    } else {
+      tasks = JSON.parse(JSON.stringify(DEFAULT_TASKS));
+    }
+  } catch(e) {
+    tasks = JSON.parse(JSON.stringify(DEFAULT_TASKS));
+  }
+  nextId = Math.max(...tasks.map(t => t.id), 99) + 1;
+}
+
+let saveTimer = null;
+function schedSave() {
+  const badge = document.getElementById('save-badge');
+  const txt   = document.getElementById('save-text');
+  badge.className = 'save-badge saving';
+  txt.textContent = 'Guardando…';
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    localStorage.setItem(LSKEY, JSON.stringify(tasks));
+    badge.className = 'save-badge saved';
+    txt.textContent = '✔ Guardado';
+    setTimeout(() => {
+      badge.className = 'save-badge';
+      txt.textContent = 'Guardado automático';
+    }, 2000);
+  }, 600);
+}
+
+// ─────────────────────────────────────────────
+//  UNDO
+// ─────────────────────────────────────────────
+function snapshot() { undoStack.push(JSON.stringify(tasks)); if(undoStack.length > 50) undoStack.shift(); }
+function undoLast() {
+  if (!undoStack.length) return showToast('Nada para deshacer', false);
+  tasks = JSON.parse(undoStack.pop());
+  schedSave(); render(); showToast('✔ Deshecho', false);
+}
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undoLast(); }
+});
+
+// ─────────────────────────────────────────────
+//  KPIs
+// ─────────────────────────────────────────────
+function renderKPIs() {
+  const visible = getVisibleTasks();
+  const tot = visible.length;
+  const con = visible.filter(t => t.status === 'Concluded').length;
+  const inp = visible.filter(t => t.status === 'In Progress').length;
+  const pen = visible.filter(t => t.status === 'Pending').length;
+  const pd  = visible.filter(t => t.status === 'Past Due').length;
+  const pct = tot ? Math.round(con / tot * 100) : 0;
+  const pctBar = w => `<div class="progress-strip"><div class="progress-fill" style="width:${w}%"></div></div>`;
+  document.getElementById('kpi-strip').innerHTML = `
+    <div class="kpi-card k-total"><div class="kpi-val">${tot}</div><div class="kpi-lbl">Total Reqs</div>${pctBar(100)}</div>
+    <div class="kpi-card k-concluded"><div class="kpi-val">${con}</div><div class="kpi-lbl">Concluded</div>${pctBar(pct)}</div>
+    <div class="kpi-card k-inprogress"><div class="kpi-val">${inp}</div><div class="kpi-lbl">In Progress</div><div class="progress-strip"><div class="progress-fill" style="width:${tot?Math.round(inp/tot*100):0}%;background:linear-gradient(90deg,var(--blue),#2563eb)"></div></div></div>
+    <div class="kpi-card k-pending"><div class="kpi-val">${pen}</div><div class="kpi-lbl">Pending</div><div class="progress-strip"><div class="progress-fill" style="width:${tot?Math.round(pen/tot*100):0}%;background:linear-gradient(90deg,var(--orange),#ea580c)"></div></div></div>
+    <div class="kpi-card k-pastdue"><div class="kpi-val">${pd}</div><div class="kpi-lbl">Past Due</div><div class="progress-strip"><div class="progress-fill" style="width:${tot?Math.round(pd/tot*100):0}%;background:linear-gradient(90deg,var(--red),#dc2626)"></div></div></div>
+    <div class="kpi-card k-pct"><div class="kpi-val">${pct}%</div><div class="kpi-lbl">Avance</div><div class="progress-strip"><div class="progress-fill" style="width:${pct}%;background:linear-gradient(90deg,#c084fc,#7c3aed)"></div></div></div>
+  `;
+}
+
+// ─────────────────────────────────────────────
+//  FILTERS
+// ─────────────────────────────────────────────
+function populateFilters() {
+  const fp = document.getElementById('f-proceso');
+  const ft = document.getElementById('f-team');
+  const curP = fp.value, curT = ft.value;
+  const procs = [...new Set(tasks.map(t => t.proceso))].sort((a, b) => {
+    const ia = PROCESS_ORDER.indexOf(a), ib = PROCESS_ORDER.indexOf(b);
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+  });
+  const teams = [...new Set(tasks.map(t => t.team))].sort();
+  fp.innerHTML = '<option value="">Todos los procesos</option>' + procs.map(p => `<option${p===curP?' selected':''}>${p}</option>`).join('');
+  ft.innerHTML = '<option value="">Todos los equipos</option>' + teams.map(t => `<option${t===curT?' selected':''}>${t}</option>`).join('');
+}
+
+function getFilters() {
+  return {
+    proceso: document.getElementById('f-proceso').value,
+    team:    document.getElementById('f-team').value,
+    status:  document.getElementById('f-status').value,
+    search:  document.getElementById('f-search').value.toLowerCase()
+  };
+}
+
+function taskMatches(t, f) {
+  return (!f.proceso || t.proceso === f.proceso)
+      && (!f.team    || t.team === f.team)
+      && (!f.status  || t.status === f.status)
+      && (!f.search  || (t.info + ' ' + t.resp + ' ' + t.proceso).toLowerCase().includes(f.search));
+}
+
+function getVisibleTasks() {
+  const f = getFilters();
+  return tasks.filter(t => taskMatches(t, f));
+}
+
+function resetFilters() {
+  document.getElementById('f-proceso').value = '';
+  document.getElementById('f-team').value    = '';
+  document.getElementById('f-status').value  = '';
+  document.getElementById('f-search').value  = '';
+  render();
+}
+
+['f-proceso','f-team','f-status'].forEach(id =>
+  document.getElementById(id).addEventListener('change', render));
+document.getElementById('f-search').addEventListener('input', render);
+
+// ─────────────────────────────────────────────
+//  HEADER BUILDER
+// ─────────────────────────────────────────────
+function buildHeader() {
+  const head = document.getElementById('gantt-head');
+
+  // ── Row 1: info cols (rowspan=2) + week group cols ──
+  let r1 = '<tr class="week-row">';
+  r1 += `<th class="info-th cell-num" rowspan="2">#</th>`;
+  r1 += `<th class="info-th" rowspan="2" style="min-width:170px">Requerimiento</th>`;
+  r1 += `<th class="info-th" rowspan="2" style="width:120px">Proceso</th>`;
+  r1 += `<th class="info-th" rowspan="2" style="width:115px">Team</th>`;
+  r1 += `<th class="info-th" rowspan="2" style="width:125px">Responsable</th>`;
+  r1 += `<th class="info-th" rowspan="2" style="width:112px;text-align:center">Estado</th>`;
+
+  WEEK_GROUPS.forEach(wg => {
+    const span   = wg.end - wg.start + 1;
+    const hasTod = TODAY_DAY >= wg.start && TODAY_DAY <= wg.end;
+    const dl     = DEADLINES.find(d => d.day >= wg.start && d.day <= wg.end);
+    let cls = hasTod ? 'wg-today' : (dl ? `wg-${dl.cls}` : '');
+    r1 += `<th colspan="${span}" class="${cls}">${wg.label}<span class="week-sub">${wg.sub}</span></th>`;
+  });
+
+  r1 += `<th class="info-th" rowspan="2" style="width:40px"></th>`; // actions
+  r1 += '</tr>';
+
+  // ── Row 2: day headers ──
+  let r2 = '<tr class="day-row">';
+  for (let d = 1; d <= TOTAL_DAYS; d++) {
+    const m = DAY_METAS[d];
+    let cls = '';
+    let badge = '';
+    if (m.isToday) {
+      cls = 'th-today';
+    } else if (m.deadline) {
+      cls = `th-${m.deadline.cls}`;
+      badge = `<span class="dl-badge" style="color:${m.deadline.color}">${m.deadline.label}</span>`;
+    } else if (m.isWeekend) {
+      cls = 'th-weekend';
+    }
+    const title = `${m.monthNum===1?'Feb':'Mar'} ${m.dayNum}${m.isToday?' ← HOY':''}${m.deadline?' '+m.deadline.title:''}`;
+    r2 += `<th class="${cls}" title="${title}"><span class="day-num">${m.dayNum}</span><span class="day-dow">${m.dowLabel}</span>${badge}</th>`;
+  }
+  r2 += '</tr>';
+
+  head.innerHTML = r1 + r2;
+}
+
+// ─────────────────────────────────────────────
+//  RENDER
+// ─────────────────────────────────────────────
+function render() {
+  populateFilters();
+  renderKPIs();
+  renderTable();
+}
+
+function renderTable() {
+  const tbody = document.getElementById('gantt-body');
+  const f       = getFilters();
+  const visible = tasks.filter(t => taskMatches(t, f));
+
+  document.getElementById('filter-count').textContent =
+    `${visible.length} de ${tasks.length} requerimientos`;
+
+  // group tasks by proceso
+  const groups = {};
+  tasks.forEach(t => {
+    if (!groups[t.proceso]) groups[t.proceso] = [];
+    groups[t.proceso].push(t);
+  });
+  const order = [...PROCESS_ORDER, ...Object.keys(groups).filter(g => !PROCESS_ORDER.includes(g))];
+
+  let html = '';
+  order.forEach(proc => {
+    if (!groups[proc]) return;
+    const gAll     = groups[proc];
+    const gVisible = gAll.filter(t => taskMatches(t, f));
+    if (!gVisible.length) return;
+
+    const gc  = gAll.filter(t => t.status === 'Concluded').length;
+    const gt  = gAll.length;
+    const pct = Math.round(gc / gt * 100);
+
+    html += `<tr class="group-row" onclick="toggleGroup(this)">
+      <td colspan="${TOTAL_COLS}">▸ ${esc(proc)}
+        <span class="gprog">
+          <span>${gc}/${gt}</span>
+          <span class="gprog-bar"><span class="gprog-fill" style="width:${pct}%"></span></span>
+          <span>${pct}%</span>
+        </span>
+      </td>
+    </tr>`;
+
+    gVisible.forEach(t => {
+      const tc = TEAM_CLASS[t.team] || 't-acc';
+      const sc = STATUS_CONFIG[t.status] || STATUS_CONFIG['Pending'];
+
+      // Build 59 day cells
+      let dayCols = '';
+      for (let d = 1; d <= TOTAL_DAYS; d++) {
+        const m          = DAY_METAS[d];
+        const isAssigned = (t.semana === d);
+
+        let cellCls = 'cell cell-day';
+        if (m.isToday)         cellCls += ' col-today';
+        else if (m.deadline)   cellCls += ` col-${m.deadline.cls}`;
+        else if (m.isWeekend)  cellCls += ' col-weekend';
+
+        let dotCls = 'wdot';
+        if (isAssigned)       dotCls += ' ' + sc.dot;
+        if (m.isToday)        dotCls += ' today-ring';
+        else if (m.deadline)  dotCls += ` ${m.deadline.cls}-ring`;
+        if (m.isWeekend)      dotCls += ' weekend-dot';
+
+        const icon    = isAssigned ? sc.icon : '';
+        const dlTitle = m.deadline ? (' · ' + m.deadline.title) : '';
+        const title   = `${m.monthNum===1?'Feb':'Mar'} ${m.dayNum}${dlTitle}${isAssigned?' · Clic para quitar':' · Clic para asignar'}`;
+
+        dayCols += `<td class="${cellCls}"><div class="${dotCls}" title="${title}" onclick="toggleDay(${t.id},${d})">${icon}</div></td>`;
+      }
+
+      html += `<tr class="task-row" data-id="${t.id}">
+        <td class="cell cell-num">${t.num}</td>
+        <td class="cell cell-info editable" ondblclick="editCell(this,'info',${t.id})" title="Doble clic para editar">
+          <span class="val">${esc(t.info)}</span>
+        </td>
+        <td class="cell cell-proceso editable" ondblclick="editCell(this,'proceso',${t.id})" title="Doble clic para editar">
+          <span class="val">${esc(t.proceso)}</span>
+        </td>
+        <td class="cell cell-team editable" ondblclick="editCell(this,'team',${t.id})" title="Doble clic para editar">
+          <span class="team-badge ${tc} val">${esc(t.team)}</span>
+        </td>
+        <td class="cell cell-resp editable" ondblclick="editCell(this,'resp',${t.id})" title="Doble clic para editar">
+          <span class="val">${esc(t.resp)}</span>
+        </td>
+        <td class="cell cell-status">
+          <span class="pill ${sc.cls}" onclick="toggleStatus(${t.id})" title="Clic para cambiar estado">
+            ${sc.icon} ${sc.label}
+          </span>
+        </td>
+        ${dayCols}
+        <td class="cell cell-actions">
+          <button class="del-btn" onclick="deleteTask(${t.id})" title="Eliminar requerimiento">✕</button>
+        </td>
+      </tr>`;
+    });
+
+    // Add row inside group
+    html += `<tr class="add-row"><td colspan="${TOTAL_COLS}">
+      <div class="add-btn-inner" onclick="addTask('${proc.replace(/'/g,"\\'")}')">
+        <span style="font-size:1rem;color:var(--accent)">＋</span> Agregar requerimiento en <em>${esc(proc)}</em>
+      </div>
+    </td></tr>`;
+  });
+
+  tbody.innerHTML = html;
+}
+
+// ─────────────────────────────────────────────
+//  INLINE EDITING
+// ─────────────────────────────────────────────
+let activeEdit = null;
+
+function editCell(cell, field, id) {
+  if (activeEdit) commitEdit(activeEdit);
+  const t = tasks.find(t => t.id === id);
+  if (!t) return;
+  snapshot();
+
+  const span = cell.querySelector('.val');
+  const orig = t[field];
+  cell.classList.add('editing');
+
+  const input = document.createElement('input');
+  input.className = 'inline-input';
+  input.value     = orig;
+  input.style.width = '100%';
+  span.replaceWith(input);
+  input.focus();
+  input.select();
+
+  activeEdit = { cell, field, id, input, orig };
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { e.preventDefault(); commitEdit(activeEdit); }
+    if (e.key === 'Escape') { cancelEdit(activeEdit); }
+  });
+  input.addEventListener('blur', () => { if (activeEdit) commitEdit(activeEdit); });
+}
+
+function commitEdit(edit) {
+  const { cell, field, id, input, orig } = edit;
+  const newVal = input.value.trim() || orig;
+  activeEdit   = null;
+
+  const t = tasks.find(t => t.id === id);
+  if (t) t[field] = newVal;
+
+  cell.classList.remove('editing');
+  const span = document.createElement('span');
+  span.className = field === 'team'
+    ? `team-badge ${TEAM_CLASS[newVal] || 't-acc'} val` : 'val';
+  span.textContent = newVal;
+  input.replaceWith(span);
+
+  if (field === 'proceso') { render(); return; }
+  schedSave();
+  renderKPIs();
+  showToast(`✏ ${field} actualizado`);
+}
+
+function cancelEdit(edit) {
+  const { cell, input, orig } = edit;
+  activeEdit = null;
+  undoStack.pop();
+  cell.classList.remove('editing');
+  const span = document.createElement('span');
+  span.className = 'val';
+  span.textContent = orig;
+  input.replaceWith(span);
+}
+
+// ─────────────────────────────────────────────
+//  ACTIONS
+// ─────────────────────────────────────────────
+function toggleStatus(id) {
+  snapshot();
+  const t = tasks.find(t => t.id === id);
+  if (!t) return;
+  const idx = STATUS_CYCLE.indexOf(t.status);
+  t.status = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+  schedSave(); render();
+  showToast(`Status → ${t.status}`);
+}
+
+function toggleDay(id, d) {
+  snapshot();
+  const t = tasks.find(t => t.id === id);
+  if (!t) return;
+  t.semana = (t.semana === d) ? 0 : d;
+  schedSave(); render();
+  const m = DAY_METAS[d];
+  const label = t.semana ? `📅 Asignado: ${m.monthNum===1?'Feb':'Mar'} ${m.dayNum}` : '📅 Día eliminado';
+  showToast(label);
+}
+
+function toggleGroup(row) {
+  row.classList.toggle('collapsed');
+}
+
+function addTask(proceso) {
+  snapshot();
+  const newTask = {
+    id:      nextId++,
+    num:     tasks.filter(t => t.proceso === proceso).length + 1,
+    proceso,
+    info:    'Nuevo requerimiento (doble clic para editar)',
+    team:    'Accounting',
+    resp:    'Responsable',
+    status:  'Pending',
+    semana:  0
+  };
+  const lastIdx = tasks.reduce((acc, t, i) => t.proceso === proceso ? i : acc, -1);
+  if (lastIdx >= 0) tasks.splice(lastIdx + 1, 0, newTask);
+  else tasks.push(newTask);
+
+  schedSave(); populateFilters(); render();
+  showToast('➕ Requerimiento agregado', false);
+
+  setTimeout(() => {
+    const row = document.querySelector(`tr[data-id="${newTask.id}"]`);
+    if (row) {
+      row.scrollIntoView({ behavior:'smooth', block:'center' });
+      const cell = row.querySelector('.cell-info.editable');
+      if (cell) editCell(cell, 'info', newTask.id);
+    }
+  }, 100);
+}
+
+function deleteTask(id) {
+  snapshot();
+  const t = tasks.find(t => t.id === id);
+  tasks = tasks.filter(t => t.id !== id);
+  schedSave(); render();
+  showToast(`🗑 Eliminado: ${t?.info?.slice(0, 30)}…`);
+}
+
+function confirmReset() {
+  if (confirm('¿Reiniciar todos los datos al estado original? Esta acción no se puede deshacer.')) {
+    snapshot();
+    tasks   = JSON.parse(JSON.stringify(DEFAULT_TASKS));
+    nextId  = 100;
+    schedSave(); render();
+    showToast('♻ Datos reiniciados', false);
+  }
+}
+
+// ─────────────────────────────────────────────
+//  EXPORT / IMPORT
+// ─────────────────────────────────────────────
+function openExport() {
+  document.getElementById('export-area').value = JSON.stringify(tasks, null, 2);
+  document.getElementById('export-modal').classList.add('open');
+}
+function openImport() {
+  document.getElementById('import-area').value = '';
+  document.getElementById('import-modal').classList.add('open');
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function downloadJSON() {
+  const blob = new Blob([JSON.stringify(tasks, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'yuno_gantt_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+}
+
+function downloadCSV() {
+  const cols = ['num','proceso','info','team','resp','status','semana'];
+  const rows = [cols.join(','), ...tasks.map(t =>
+    cols.map(c => `"${(t[c]||'').toString().replace(/"/g,'""')}"`).join(','))];
+  const blob = new Blob([rows.join('\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'yuno_gantt_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+function copyJSON() {
+  navigator.clipboard.writeText(JSON.stringify(tasks, null, 2));
+  showToast('📋 JSON copiado');
+}
+
+function importJSON() {
+  try {
+    const data = JSON.parse(document.getElementById('import-area').value);
+    if (!Array.isArray(data)) throw new Error('not array');
+    snapshot();
+    tasks  = data.map(migrateTask);
+    nextId = Math.max(...tasks.map(t => t.id || 0), 99) + 1;
+    schedSave(); populateFilters(); render();
+    closeModal('import-modal');
+    showToast(`✔ Importados ${tasks.length} requerimientos`, false);
+  } catch(e) {
+    alert('JSON inválido. Revisá el formato e intentá de nuevo.');
+  }
+}
+
+document.querySelectorAll('.modal-overlay').forEach(mo => {
+  mo.addEventListener('click', e => { if (e.target === mo) mo.classList.remove('open'); });
+});
+
+// ─────────────────────────────────────────────
+//  TOAST
+// ─────────────────────────────────────────────
+let toastTimer = null;
+function showToast(msg, withUndo = true) {
+  const t = document.getElementById('toast');
+  const m = document.getElementById('toast-msg');
+  const u = t.querySelector('.toast-undo');
+  m.textContent = msg;
+  u.style.display = withUndo ? '' : 'none';
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ─────────────────────────────────────────────
+//  UTILS
+// ─────────────────────────────────────────────
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────
+loadData();
+buildHeader();
+render();
+</script>
+</body>
+</html>
